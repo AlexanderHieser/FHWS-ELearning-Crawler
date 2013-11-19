@@ -20,11 +20,10 @@ namespace ELearningCrawler
 
         public async Task LoginToELeraning(string user, string password)
         {
-            HttpWebRequest req = (HttpWebRequest)WebRequest.CreateHttp("https://elearning.fhws.de/login/index.php");
-            req.Method = "POST";
-            req.ContentType = "application/x-www-form-urlencoded";
             cookies = new CookieContainer();
-            req.CookieContainer = cookies;
+
+            HttpWebRequest req = CreateHttpWebRequest("POST", "https://elearning.fhws.de/login/index.php");
+            req.ContentType = "application/x-www-form-urlencoded";
 
             using (StreamWriter sw = new StreamWriter(req.GetRequestStream()))
             {
@@ -33,9 +32,7 @@ namespace ELearningCrawler
 
             using (HttpWebResponse response = (HttpWebResponse)(await req.GetResponseAsync()))
             {
-                HttpWebRequest req2 = (HttpWebRequest)WebRequest.CreateHttp(response.ResponseUri);
-                req2.Method = "GET";
-                req2.CookieContainer = cookies;
+                HttpWebRequest req2 = CreateHttpWebRequest("GET", response.ResponseUri);
 
                 using (HttpWebResponse response2 = (HttpWebResponse)(await req2.GetResponseAsync()))
                 {
@@ -49,6 +46,19 @@ namespace ELearningCrawler
             CookieAwareWebClient wc = new CookieAwareWebClient();
             wc.CookieContainer = cookies;
             return wc;
+        }
+
+        private HttpWebRequest CreateHttpWebRequest(string method, string url)
+        {
+            return CreateHttpWebRequest(method, new Uri(url));
+        }
+
+        private HttpWebRequest CreateHttpWebRequest(string method, Uri uri)
+        {
+            HttpWebRequest req = (HttpWebRequest)WebRequest.CreateHttp(uri);
+            req.Method = string.IsNullOrEmpty(method) ? "GET" : method;
+            req.CookieContainer = cookies;
+            return req;
         }
 
         private async Task<HtmlDocument> HtmlDocumentFromUrl(string url)
@@ -122,10 +132,7 @@ namespace ELearningCrawler
 
                     string title = mat.SelectSingleNode("span[@class='instancename']").FirstChild.InnerText;
 
-                    WebClient client = CreateWebclient();
-
-                    WebRequest req = WebRequest.Create(downloadLink);
-                    req.Headers = client.Headers;
+                    HttpWebRequest req = CreateHttpWebRequest("GET", downloadLink);
 
                     using (WebResponse response = await req.GetResponseAsync())
                     {
